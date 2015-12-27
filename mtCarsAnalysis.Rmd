@@ -1,0 +1,83 @@
+---
+title: "Motor Trend Cars Test Analysis"
+author: "Halley Wang"
+date: "December 26, 2015"
+output: pdf_document
+---
+
+```{r load package, cache = TRUE, results='hide', warning=FALSE}
+## Loading the necessary packages
+library(ggplot2)
+library(dplyr)
+library(grid)
+library(gridExtra)
+```
+
+####Variable plot
+
+First we test the relationship of all variables on the response mpg:
+
+```{r summary, cache = TRUE}
+head(mtcars)
+
+## All variables
+lmMPG_all = lm(mpg ~ ., data = mtcars)
+summary(lmMPG_all)$coefficients
+```
+
+As we can see the p-values in the summary, wt has the least p-values and therefore the most significant impact on the response mpg.
+
+```{r Dummy variable, cache = TRUE}
+## We want to study the relationship between the miles per gallon with the transmission type and the weight:
+lmMPG_main = with(mtcars, lm(mpg ~ factor(am) + wt))
+lmMPG_interact = with(mtcars, lm(mpg ~ factor(am) * wt))
+
+anova(lmMPG_main, lmMPG_interact)
+```
+
+As we can see from the ANOVA result, the interacton term is significant for the result mpg, which means that the effect of weight on two transmission type is different. Therefore we use the interaction model.
+
+---
+
+####Coefficients explanation
+
+```{r model summary, cache = TRUE}
+summary(lmMPG_interact)$coefficients
+coef(lmMPG_interact)
+```
+
+As we can see from the summary, all coefficients have very small p-values, and therefore are significant on the result.
+
+For level am=0 (automatic transmission), the mean response function for mpg is Intercept + wt * weight, which is `r coef(lmMPG_interact)[1]` + `r coef(lmMPG_interact)[3]` * weight.
+
+For level am=0 (manual transmission), the mean response function for mpg is (Intercept + factor(am)1) + (factor(am)1:wt + wt) * weight, which is `r coef(lmMPG_interact)[1] + coef(lmMPG_interact)[2]` + `r coef(lmMPG_interact)[3] + coef(lmMPG_interact)[4]` * weight.
+
+In conclusion, for Automatic transmission, each 1000 pound will reduce `r abs(coef(lmMPG_interact)[3])` loss in mpg, for manual transmission, each 1000 pound will reduce `r abs(coef(lmMPG_interact)[3] + coef(lmMPG_interact)[4])` loss in mpg.
+
+---
+
+####Summary
+
+As we can see from the residual plot (Appendix II), there is no significant patterns.
+
+As we can see from the scatter plot (Appendix I), Althogh the manual transmission has rapid drop for each 1000 lb loss weight, it has generally more mpg than automatic transmission cars at each level of weight.
+
+---
+
+####Appendix
+
+####Appendix I: scatter plot
+
+```{r plot, cache = TRUE}
+g1 = ggplot(data = mtcars, aes(x = wt, y = mpg, color = factor(am)))
+g1 = g1 + geom_point() + geom_smooth(method = "lm")
+g1 + labs(title = "Appendix I: wt on mpg for different transmissions", x = "Weight(1000lb)", y = "mpg (miles per gallon)")
+```
+
+#### Appendix II: residual plot
+
+```{r residual plot, cache = TRUE}
+## Residual plot: fitted values verses Residuals:
+plot(x = fitted.values(lmMPG_interact), y = resid(lmMPG_interact), pch = 20, xlab = "fitted value for interaction model", ylab = "residuals for interaction model", main = "Appendix II: residual plot for interac effect model")
+
+```
